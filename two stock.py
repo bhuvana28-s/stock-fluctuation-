@@ -74,7 +74,7 @@ def compare_stocks(ticker1, ticker2, start_date='2023-01-01', end_date=None):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-if __name__ == '__main__':
+if __name__ == '__main__'
     # --- USER INPUT ---
     # You can change the stock tickers and the date range here
     stock_ticker_1 = 'GOOGL'  # Example: Google
@@ -83,3 +83,4 @@ if __name__ == '__main__':
     end = '2024-09-01'
 
     compare_stocks(stock_ticker_1, stock_ticker_2, start_date=start, end_date=end)
+
