@@ -16,7 +16,7 @@ market = st.sidebar.selectbox(
 if market == "US Market":
     default_tickers = ["AAPL", "MSFT", "GOOGL", "TSLA"]
 elif market == "Indian Market":
-    default_tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "TATASTEEL.NS", "HONOR.NS"]
+    default_tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "TATASTEEL.NS"]
 else:
     default_tickers = ["BTC-USD", "ETH-USD", "DOGE-USD"]
 
@@ -91,4 +91,5 @@ if tickers:
 
     except Exception as e:
         st.error(f"❌ Error fetching data: {e}")
+
 
