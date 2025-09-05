@@ -23,7 +23,6 @@ def compare_stocks(ticker1, ticker2, start_date='2023-01-01', end_date=None):
             return
 
         # --- 1. Price Performance Comparison (Normalized) ---
-        # Normalize the closing prices to see the performance over time starting from the same baseline.
         normalized_stock1 = (stock1_data['Close'] / stock1_data['Close'][0]) * 100
         normalized_stock2 = (stock2_data['Close'] / stock2_data['Close'][0]) * 100
 
@@ -38,15 +37,12 @@ def compare_stocks(ticker1, ticker2, start_date='2023-01-01', end_date=None):
         plt.show()
 
         # --- 2. Key Performance Metrics ---
-        # Calculate daily returns
         stock1_returns = stock1_data['Close'].pct_change().dropna()
         stock2_returns = stock2_data['Close'].pct_change().dropna()
 
-        # Calculate total return
         total_return_stock1 = (stock1_data['Close'][-1] - stock1_data['Close'][0]) / stock1_data['Close'][0]
         total_return_stock2 = (stock2_data['Close'][-1] - stock2_data['Close'][0]) / stock2_data['Close'][0]
 
-        # Calculate volatility (standard deviation of daily returns)
         volatility_stock1 = stock1_returns.std()
         volatility_stock2 = stock2_returns.std()
 
@@ -70,17 +66,14 @@ def compare_stocks(ticker1, ticker2, start_date='2023-01-01', end_date=None):
         print("A value close to -1 means they move in opposite directions.")
         print("A value close to 0 means they have little to no linear relationship.")
 
-
     except Exception as e:
         print(f"An error occurred: {e}")
 
-if __name__ == '__main__'
+if __name__ == '__main__':
     # --- USER INPUT ---
-    # You can change the stock tickers and the date range here
     stock_ticker_1 = 'GOOGL'  # Example: Google
     stock_ticker_2 = 'MSFT'   # Example: Microsoft
     start = '2024-01-01'
     end = '2024-09-01'
 
     compare_stocks(stock_ticker_1, stock_ticker_2, start_date=start, end_date=end)
-
