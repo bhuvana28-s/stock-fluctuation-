@@ -1,79 +1,60 @@
+import streamlit as st
 import yfinance as yf
-import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.graph_objs as go
 
-def compare_stocks(ticker1, ticker2, start_date='2023-01-01', end_date=None):
-    """
-    Compares two stocks based on their historical closing prices.
+st.set_page_config(page_title="📈 Stock Comparison", layout="wide")
 
-    Args:
-        ticker1 (str): The ticker symbol of the first stock.
-        ticker2 (str): The ticker symbol of the second stock.
-        start_date (str): The start date for the data in 'YYYY-MM-DD' format.
-        end_date (str): The end date for the data in 'YYYY-MM-DD' format.
-                        If None, data will be fetched up to the most recent day.
-    """
+st.title("📊 Compare Two Stocks (Interactive with Plotly)")
+
+# Sidebar inputs
+ticker1 = st.sidebar.text_input("Enter First Stock Ticker", "AAPL")
+ticker2 = st.sidebar.text_input("Enter Second Stock Ticker", "GOOGL")
+start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2023-01-01"))
+end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
+
+if st.sidebar.button("Compare"):
     try:
-        # Download historical data for the two stocks
-        stock1_data = yf.download(ticker1, start=start_date, end=end_date)
-        stock2_data = yf.download(ticker2, start=start_date, end=end_date)
+        # Fetch data
+        data = yf.download([ticker1, ticker2], start=start_date, end=end_date)['Adj Close']
 
-        if stock1_data.empty or stock2_data.empty:
-            print("Could not retrieve data for one or both tickers. Please check the symbols.")
-            return
+        if data.empty:
+            st.error("⚠️ No data found for given tickers/dates.")
+        else:
+            st.subheader("📋 Stock Prices (Last 10 Rows)")
+            st.dataframe(data.tail(10))
 
-        # --- 1. Price Performance Comparison (Normalized) ---
-        normalized_stock1 = (stock1_data['Close'] / stock1_data['Close'][0]) * 100
-        normalized_stock2 = (stock2_data['Close'] / stock2_data['Close'][0]) * 100
+            # Price trends
+            st.subheader("📈 Adjusted Close Price Comparison")
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=data.index, y=data[ticker1], mode='lines', name=ticker1))
+            fig.add_trace(go.Scatter(x=data.index, y=data[ticker2], mode='lines', name=ticker2))
+            fig.update_layout(title="Adjusted Close Price Comparison", xaxis_title="Date", yaxis_title="Price", template="plotly_dark")
+            st.plotly_chart(fig, use_container_width=True)
 
-        plt.figure(figsize=(14, 7))
-        plt.plot(normalized_stock1, label=f'{ticker1} Normalized Price')
-        plt.plot(normalized_stock2, label=f'{ticker2} Normalized Price')
-        plt.title(f'Stock Price Performance: {ticker1} vs {ticker2}')
-        plt.xlabel('Date')
-        plt.ylabel('Normalized Price (Start = 100)')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
+            # Daily returns
+            returns = data.pct_change().dropna()
+            st.subheader("📉 Daily Returns")
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=returns.index, y=returns[ticker1], mode='lines', name=f"{ticker1} Daily Return"))
+            fig.add_trace(go.Scatter(x=returns.index, y=returns[ticker2], mode='lines', name=f"{ticker2} Daily Return"))
+            fig.update_layout(title="Daily Returns", xaxis_title="Date", yaxis_title="Return", template="plotly_dark")
+            st.plotly_chart(fig, use_container_width=True)
 
-        # --- 2. Key Performance Metrics ---
-        stock1_returns = stock1_data['Close'].pct_change().dropna()
-        stock2_returns = stock2_data['Close'].pct_change().dropna()
+            # Cumulative returns
+            cum_returns = (1 + returns).cumprod() - 1
+            st.subheader("📊 Cumulative Returns")
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=cum_returns.index, y=cum_returns[ticker1], mode='lines', name=f"{ticker1} Cumulative Return"))
+            fig.add_trace(go.Scatter(x=cum_returns.index, y=cum_returns[ticker2], mode='lines', name=f"{ticker2} Cumulative Return"))
+            fig.update_layout(title="Cumulative Returns", xaxis_title="Date", yaxis_title="Cumulative Return", template="plotly_dark")
+            st.plotly_chart(fig, use_container_width=True)
 
-        total_return_stock1 = (stock1_data['Close'][-1] - stock1_data['Close'][0]) / stock1_data['Close'][0]
-        total_return_stock2 = (stock2_data['Close'][-1] - stock2_data['Close'][0]) / stock2_data['Close'][0]
-
-        volatility_stock1 = stock1_returns.std()
-        volatility_stock2 = stock2_returns.std()
-
-        print("\n--- Key Performance Metrics ---")
-        print(f"Period: {start_date} to {end_date if end_date else 'Today'}")
-        print("\n" + "="*40)
-        print(f"Ticker: {ticker1}")
-        print(f"Total Return: {total_return_stock1:.2%}")
-        print(f"Volatility (Daily): {volatility_stock1:.4f}")
-        print("="*40)
-        print(f"Ticker: {ticker2}")
-        print(f"Total Return: {total_return_stock2:.2%}")
-        print(f"Volatility (Daily): {volatility_stock2:.4f}")
-        print("="*40)
-
-        # --- 3. Correlation ---
-        returns_df = pd.DataFrame({ticker1: stock1_returns, ticker2: stock2_returns})
-        correlation = returns_df.corr().iloc[0, 1]
-        print(f"\nCorrelation between {ticker1} and {ticker2}: {correlation:.4f}")
-        print("A value close to 1 means the stocks move in the same direction.")
-        print("A value close to -1 means they move in opposite directions.")
-        print("A value close to 0 means they have little to no linear relationship.")
+            # Volatility
+            volatility = returns.std()
+            st.subheader("📌 Volatility (Std Dev of Daily Returns)")
+            st.write(f"{ticker1}: {volatility[ticker1]:.4f}")
+            st.write(f"{ticker2}: {volatility[ticker2]:.4f}")
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-
-if __name__ == '__main__':
-    # --- USER INPUT ---
-    stock_ticker_1 = 'GOOGL'  # Example: Google
-    stock_ticker_2 = 'MSFT'   # Example: Microsoft
-    start = '2024-01-01'
-    end = '2024-09-01'
-
-    compare_stocks(stock_ticker_1, stock_ticker_2, start_date=start, end_date=end)
+        st.error(f"❌ Error: {e}")
