@@ -18,65 +18,37 @@ end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 # ------------------ Fetch & Process Data ------------------
 if st.sidebar.button("Compare"):
     try:
-        # Download adjusted close prices
-        data = yf.download([ticker1, ticker2], start=start_date, end=end_date)['Adj Close']
+        # Download full data (not just Adj Close)
+        data = yf.download([ticker1, ticker2], start=start_date, end=end_date)
 
         if data.empty:
             st.error("⚠️ No data found. Check tickers or date range.")
         else:
             # ------------------ Data Preview ------------------
-            st.subheader("📋 Stock Prices (Last 10 Rows)")
+            st.subheader("📋 Stock Data (Last 10 Rows)")
             st.dataframe(data.tail(10))
 
-            # ------------------ Adjusted Close Prices ------------------
-            st.subheader("📈 Adjusted Close Price Comparison")
+            # ------------------ Select Column to Plot ------------------
+            available_columns = data.columns.levels[0]  # ['Open','High','Low','Close','Adj Close','Volume']
+            selected_column = st.selectbox("📌 Select Data Column to Plot", available_columns, index=4)
+
+            # Extract the chosen column
+            plot_data = data[selected_column]
+
+            # ------------------ Plot ------------------
+            st.subheader(f"📈 {selected_column} Comparison")
             fig = go.Figure()
-            for ticker in data.columns:
+            for ticker in plot_data.columns:
                 fig.add_trace(go.Scatter(
-                    x=data.index, y=data[ticker], mode='lines', name=ticker
+                    x=plot_data.index, y=plot_data[ticker],
+                    mode='lines', name=ticker
                 ))
             fig.update_layout(
-                title="Adjusted Close Prices",
-                xaxis_title="Date", yaxis_title="Price",
+                title=f"{selected_column} Comparison of {ticker1} vs {ticker2}",
+                xaxis_title="Date", yaxis_title=selected_column,
                 template="plotly_dark"
             )
             st.plotly_chart(fig, use_container_width=True)
-
-            # ------------------ Daily Returns ------------------
-            returns = data.pct_change().dropna()
-            st.subheader("📉 Daily Returns")
-            fig = go.Figure()
-            for ticker in returns.columns:
-                fig.add_trace(go.Scatter(
-                    x=returns.index, y=returns[ticker], mode='lines', name=f"{ticker} Daily Return"
-                ))
-            fig.update_layout(
-                title="Daily Returns",
-                xaxis_title="Date", yaxis_title="Return",
-                template="plotly_dark"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-            # ------------------ Cumulative Returns ------------------
-            cum_returns = (1 + returns).cumprod() - 1
-            st.subheader("📊 Cumulative Returns")
-            fig = go.Figure()
-            for ticker in cum_returns.columns:
-                fig.add_trace(go.Scatter(
-                    x=cum_returns.index, y=cum_returns[ticker], mode='lines', name=f"{ticker} Cumulative Return"
-                ))
-            fig.update_layout(
-                title="Cumulative Returns",
-                xaxis_title="Date", yaxis_title="Cumulative Return",
-                template="plotly_dark"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-            # ------------------ Volatility ------------------
-            volatility = returns.std()
-            st.subheader("📌 Volatility (Standard Deviation of Daily Returns)")
-            vol_table = pd.DataFrame(volatility, columns=["Volatility"]).T
-            st.table(vol_table.style.format("{:.4f}"))
 
     except Exception as e:
         st.error(f"❌ Error: {e}")
