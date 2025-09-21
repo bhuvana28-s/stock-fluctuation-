@@ -4,21 +4,51 @@ import pandas as pd
 import plotly.graph_objs as go
 
 # ------------------ Streamlit Page Config ------------------
-st.set_page_config(page_title="📈 Stock Comparison Dashboard", layout="wide")
+st.set_page_config(page_title="📈 NSE vs BSE Stock Comparison", layout="wide")
 
-st.title("📊 Interactive Stock Comparison Dashboard")
+st.title("📊 NSE vs BSE Stock Comparison Dashboard")
+
+# ------------------ Predefined Stock Lists ------------------
+# NSE (suffix .NS for Yahoo Finance)
+nse_stocks = {
+    "Reliance Industries": "RELIANCE.NS",
+    "Tata Consultancy Services": "TCS.NS",
+    "Infosys": "INFY.NS",
+    "HDFC Bank": "HDFCBANK.NS",
+    "ICICI Bank": "ICICIBANK.NS",
+    "State Bank of India": "SBIN.NS",
+    "Bharti Airtel": "BHARTIARTL.NS",
+    "Adani Enterprises": "ADANIENT.NS"
+}
+
+# BSE (suffix .BO for Yahoo Finance)
+bse_stocks = {
+    "Reliance Industries": "500325.BO",
+    "Tata Consultancy Services": "532540.BO",
+    "Infosys": "500209.BO",
+    "HDFC Bank": "500180.BO",
+    "ICICI Bank": "532174.BO",
+    "State Bank of India": "500112.BO",
+    "Bharti Airtel": "532454.BO",
+    "Adani Enterprises": "512599.BO"
+}
 
 # ------------------ Sidebar Inputs ------------------
 st.sidebar.header("🔧 Settings")
-ticker1 = st.sidebar.text_input("Enter First Stock Ticker", "AAPL")
-ticker2 = st.sidebar.text_input("Enter Second Stock Ticker", "GOOGL")
+
+nse_choice = st.sidebar.selectbox("Select NSE Stock", list(nse_stocks.keys()), index=0)
+bse_choice = st.sidebar.selectbox("Select BSE Stock", list(bse_stocks.keys()), index=1)
+
+ticker1 = nse_stocks[nse_choice]
+ticker2 = bse_stocks[bse_choice]
+
 start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2023-01-01"))
 end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 
 # ------------------ Fetch & Process Data ------------------
 if st.sidebar.button("Compare"):
     try:
-        # Download full data (not just Adj Close)
+        # Download all columns
         data = yf.download([ticker1, ticker2], start=start_date, end=end_date)
 
         if data.empty:
@@ -44,7 +74,7 @@ if st.sidebar.button("Compare"):
                     mode='lines', name=ticker
                 ))
             fig.update_layout(
-                title=f"{selected_column} Comparison of {ticker1} vs {ticker2}",
+                title=f"{selected_column} Comparison ({nse_choice} vs {bse_choice})",
                 xaxis_title="Date", yaxis_title=selected_column,
                 template="plotly_dark"
             )
