@@ -1,95 +1,54 @@
 import streamlit as st
 import yfinance as yf
-import plotly.graph_objs as go
 import pandas as pd
+import plotly.graph_objs as go
 
-st.set_page_config(page_title="📈 Stock Comparison Viewer", layout="wide")
+# ------------------ Streamlit Page Config ------------------
+st.set_page_config(page_title="📈 Stock Comparison Dashboard", layout="wide")
 
-st.title("📊 Stock Data Viewer & Comparison")
+st.title("📊 Interactive Stock Comparison Dashboard")
 
-# Sidebar: Market selection
-market = st.sidebar.selectbox(
-    "Select Market",
-    ["US Market", "Indian Market", "Crypto"]
-)
+# ------------------ Sidebar Inputs ------------------
+st.sidebar.header("🔧 Settings")
+ticker1 = st.sidebar.text_input("Enter First Stock Ticker", "AAPL")
+ticker2 = st.sidebar.text_input("Enter Second Stock Ticker", "GOOGL")
+start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2023-01-01"))
+end_date = st.sidebar.date_input("End Date", pd.to_datetime("today"))
 
-if market == "US Market":
-    default_tickers = ["AAPL", "MSFT", "GOOGL", "TSLA"]
-elif market == "Indian Market":
-    default_tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "TATASTEEL.NS"]
-else:
-    default_tickers = ["BTC-USD", "ETH-USD", "DOGE-USD"]
-
-tickers = st.sidebar.multiselect(
-    "Select Tickers to Compare",
-    options=default_tickers,
-    default=default_tickers[:2]
-)
-
-# Sidebar: Time controls
-period = st.sidebar.selectbox(
-    "Select Period",
-    ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"],
-    index=1
-)
-interval = st.sidebar.selectbox(
-    "Select Interval",
-    ["1d", "1wk", "1mo"],
-    index=0
-)
-
-if tickers:
+# ------------------ Fetch & Process Data ------------------
+if st.sidebar.button("Compare"):
     try:
-        df = yf.download(tickers, period=period, interval=interval, progress=False)
+        # Download full data (not just Adj Close)
+        data = yf.download([ticker1, ticker2], start=start_date, end=end_date)
 
-        if df.empty:
-            st.error("⚠️ No data found. Try different tickers or period/interval.")
+        if data.empty:
+            st.error("⚠️ No data found. Check tickers or date range.")
         else:
-            # Flatten MultiIndex columns if multiple tickers
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = [' '.join(col).strip() for col in df.columns.values]
+            # ------------------ Data Preview ------------------
+            st.subheader("📋 Stock Data (Last 10 Rows)")
+            st.dataframe(data.tail(10))
 
-            # Show full table
-            st.subheader("📋 Full Stock Data Table")
-            st.dataframe(df.tail(10))  # last 10 rows
+            # ------------------ Select Column to Plot ------------------
+            available_columns = data.columns.levels[0]  # ['Open','High','Low','Close','Adj Close','Volume']
+            selected_column = st.selectbox("📌 Select Data Column to Plot", available_columns, index=4)
 
-            # Dynamically detect available columns
-            available_columns = [col for col in df.columns if any(key in col for key in ["Open","High","Low","Close","Adj Close","Volume"])]
+            # Extract the chosen column
+            plot_data = data[selected_column]
 
-            # Sidebar: column selection based on actual data
-            column_to_plot = st.sidebar.selectbox(
-                "Select Data Column to Plot",
-                available_columns
-            )
-
-            # Plot graph
+            # ------------------ Plot ------------------
+            st.subheader(f"📈 {selected_column} Comparison")
             fig = go.Figure()
-            if isinstance(df[column_to_plot], pd.DataFrame):  # multiple tickers
-                for col in df[column_to_plot].columns:
-                    fig.add_trace(go.Scatter(
-                        x=df.index,
-                        y=df[column_to_plot][col],
-                        mode="lines",
-                        name=col
-                    ))
-            else:  # single ticker
+            for ticker in plot_data.columns:
                 fig.add_trace(go.Scatter(
-                    x=df.index,
-                    y=df[column_to_plot],
-                    mode="lines",
-                    name=column_to_plot
+                    x=plot_data.index, y=plot_data[ticker],
+                    mode='lines', name=ticker
                 ))
-
             fig.update_layout(
-                title=f"{column_to_plot} Over Time",
-                xaxis_title="Date",
-                yaxis_title=column_to_plot,
-                template="plotly_dark",
-                legend=dict(x=0, y=1, bgcolor="rgba(0,0,0,0)")
+                title=f"{selected_column} Comparison of {ticker1} vs {ticker2}",
+                xaxis_title="Date", yaxis_title=selected_column,
+                template="plotly_dark"
             )
             st.plotly_chart(fig, use_container_width=True)
 
     except Exception as e:
-        st.error(f"❌ Error fetching data: {e}")
-
-
+        st.error(f"❌ Error: {e}")
